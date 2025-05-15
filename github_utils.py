@@ -29,3 +29,27 @@ def get_diff(repo, pr_number, token):
     }
     response = requests.get(url, headers=headers, verify=False)
     return response.text
+
+def find_all_repo_names(data):
+    result = []
+    if isinstance(data, dict):
+        for key, value in data.items():
+            if key == "full_name":
+                result.append(value)
+            elif isinstance(value, (dict, list)):
+                result.extend(find_all_repo_names(value))
+    elif isinstance(data, list):
+        for item in data:
+            result.extend(find_all_repo_names(item))
+    return result
+
+def fetch_org_repos(org, token):
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github.v3+json"
+    }
+    url = f"{GITHUB_API}/orgs/{org}/repos"
+    response = requests.get(url, headers=headers, verify=False)
+    data = response.json()
+    repos = find_all_repo_names(data)
+    return repos
