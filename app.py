@@ -1,10 +1,11 @@
 import streamlit as st
-from github_utils import fetch_prs, get_diff
+from github_utils import fetch_prs, get_diff, fetch_prs_for_metrics
 from ai_summarizer import summarize_diff, review_pr
 from datetime import datetime
 import pandas as pd
 import os
 from dotenv import load_dotenv
+from metrics_utils import analyze_pr_metrics
 load_dotenv()
 
 st.title("🤖 PR Review Assistant (AI Powered)")
@@ -17,7 +18,7 @@ token = os.getenv("GITHUB_TOKEN")
 since = st.date_input("Start Date")
 until = st.date_input("End Date")
 
-tab1, tab2 = st.tabs(["Merged PRs Summary", "Open PRs Review"])
+tab1, tab2, tab3 = st.tabs(["Merged PRs Summary", "Open PRs Review", "PR Metrics"])
 
 # ------------------- TAB 1: Merged PRs -------------------
 with tab1:
@@ -103,3 +104,22 @@ with tab2:
                     cols[0].markdown(f"**{row['Title']}**")
                     cols[1].markdown(row['Metadata'], unsafe_allow_html=True)
                     cols[2].markdown(row['Summary'], unsafe_allow_html=True)
+# ------------------- TAB 3: PR Metrics  -------------------
+with tab3:
+    if st.button("Generate PR Metrics"):
+        if not repo or not token:
+            st.error("Missing GitHub repo or token.")
+        else:
+            st.info("Fetching PRs for metrics analysis...")
+
+            # Use state=None to fetch all PRs (open + closed)
+            try:
+                prs = fetch_prs_for_metrics(repo, token, since.isoformat(), until.isoformat(), state=None)
+                if not prs:
+                    st.warning("No PRs found in this date range.")
+                else:
+                    df = analyze_pr_metrics(repo, prs)
+                    st.dataframe(df, use_container_width=True)
+                    st.download_button("Download CSV", df.to_csv(index=False), "pr_metrics.csv", "text/csv")
+            except Exception as e:
+                st.error(f"Error while generating metrics: {e}")
