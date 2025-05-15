@@ -7,7 +7,7 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
-st.title("🔍 AI-Powered PR Review Bot")
+st.title("🤖 PR Review Assistant (AI Powered)")
 
 repo = st.text_input("GitHub Repository", "your-org/your-repo")
 # repo = "vamshikarru01/ai-pr-summarizer"
@@ -73,18 +73,33 @@ with tab2:
             st.info("Fetching Open PRs...")
             open_prs = fetch_prs(repo, token, since.isoformat(), until.isoformat(), state="open")
             st.success(f"🔍 Found {len(open_prs)} open PR(s).")
+            pr_data = []
 
             for pr in open_prs:
                 with st.spinner(f"Analyzing PR #{pr['number']}..."):
                     diff = get_diff(repo, pr['number'], token)
                     quality_feedback = review_pr(diff)
 
-                with st.expander(f"#{pr['number']} - {pr['title']}"):
-                    st.markdown(f"""
-                    **👤 Author**: `{pr['user']['login']}`  
-                    **🕒 Created at**: `{pr['created_at']}`  
-                    **🔗 URL**: [View PR]({pr['html_url']})
-                    """)
+                title = f"#{pr['number']} - {pr['title']}"
+                metadata = (
+                    f"<strong>Author:</strong> {pr['user']['login']}<br>"
+                    f"<a href='{pr['html_url']}' target='_blank'>View PR</a>"
+                )
 
-                    st.markdown("### 🧪 Code Quality Suggestions")
-                    st.code(quality_feedback, language="markdown")
+                pr_data.append({
+                    "Title": title,
+                    "Metadata": metadata,
+                    "Summary": quality_feedback
+                })
+            st.session_state.open_prs = pr_data
+
+            # Display the table after all PRs are processed
+            if st.session_state.open_prs:
+                st.markdown("## PR Summary Table")
+                df = pd.DataFrame(st.session_state.open_prs)
+                for i, row in df.iterrows():
+                    st.markdown("---")
+                    cols = st.columns([1.5, 2, 3])  # Adjust column widths
+                    cols[0].markdown(f"**{row['Title']}**")
+                    cols[1].markdown(row['Metadata'], unsafe_allow_html=True)
+                    cols[2].markdown(row['Summary'], unsafe_allow_html=True)

@@ -3,14 +3,14 @@ import os
 import httpx
 
 api_key = os.getenv("OPENAI_API_KEY")
+client = OpenAI(api_key=api_key, http_client=httpx.Client(verify=False))
 
 def summarize_diff(diff_text):
     prompt = f"Summarize this GitHub PR diff:\n{diff_text[:4000]}"  # Truncate if needed
-    client = OpenAI(api_key=api_key, http_client=httpx.Client(verify=False))
 
     response = client.responses.create(
         model="gpt-4o",
-        instructions="You're a senior engineer summarizing GitHub PRs in couple of sentences, Be concise and helpful.",
+        instructions="You're a senior engineer summarizing GitHub PRs in couple of sentences for functional team purpose, Be concise and helpful.",
         input=prompt,
     )
     # print(response.output_text)
@@ -26,7 +26,6 @@ def review_pr(diff_text):
 
         PR diff:\n{diff_text}
         """
-    client = OpenAI(api_key=api_key, http_client=httpx.Client(verify=False))
 
     response = client.responses.create(
         model="gpt-4o",
