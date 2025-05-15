@@ -1,5 +1,5 @@
 import streamlit as st
-from github_utils import fetch_prs, get_diff
+from github_utils import fetch_prs, get_diff, fetch_org_repos
 from ai_summarizer import summarize_diff, review_pr
 from datetime import datetime
 import pandas as pd
@@ -9,7 +9,7 @@ load_dotenv()
 
 st.title("🤖 PR Review Assistant (AI Powered)")
 
-repo = st.text_input("GitHub Repository", "your-org/your-repo")
+org = st.text_input("GitHub Org", "NexusInnovate")
 # repo = "vamshikarru01/ai-pr-summarizer"
 # token = st.text_input("GitHub Token", type="password")
 token = os.getenv("GITHUB_TOKEN")
@@ -31,7 +31,7 @@ tab1, tab2 = st.tabs(["Merged PRs Summary", "Open PRs Review"])
 # ------------------- TAB 1: Merged PRs -------------------
 with tab1:
     if st.button("Generate Summaries"):
-        if not repo or not token:
+        if not selected_repo_list or not token:
             st.error("Missing GitHub repo or token.")
         else:
           for repo in selected_repo_list:  
@@ -77,7 +77,7 @@ with tab1:
 # ------------------- TAB 2: Open PRs -------------------
 with tab2:
     if st.button("Check Open PRs Review"):
-        if not repo or not token:
+        if not selected_repo_list or not token:
             st.error("Missing GitHub repo or token.")
         else:
           for repo in selected_repo_list:  
