@@ -1,5 +1,5 @@
 import streamlit as st
-from github_utils import fetch_prs, get_diff, fetch_prs_for_metrics
+from github_utils import fetch_prs, get_diff, fetch_prs_for_metrics, get_repos_in_org
 from ai_summarizer import summarize_diff, review_pr
 from datetime import datetime
 import pandas as pd
@@ -10,10 +10,22 @@ load_dotenv()
 
 st.title("🤖 PR Review Assistant (AI Powered)")
 
-repo = st.text_input("GitHub Repository", "your-org/your-repo")
-# repo = "vamshikarru01/ai-pr-summarizer"
-# token = st.text_input("GitHub Token", type="password")
+org = st.text_input("Github Org", "NexusInnovate")
+
 token = os.getenv("GITHUB_TOKEN")
+
+repo_options = []
+selected_repos = []
+if org:
+    repo_options = get_repos_in_org(org, token)
+    if not repo_options:
+        st.warning("No repositories found or invalid organization.")
+    else:
+        with st.expander("Select Repositories"):
+            for repo in repo_options:
+                if st.checkbox(repo, key=repo):
+                    selected_repos.append(repo)
+
 
 since = st.date_input("Start Date")
 until = st.date_input("End Date")

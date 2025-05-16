@@ -5,6 +5,17 @@ from dotenv import load_dotenv
 load_dotenv()
 GITHUB_API = os.getenv("GITHUB_API")
 
+def get_repos_in_org(org, token):
+    url = f"{GITHUB_API}/orgs/{org}/repos?per_page=100"
+    headers = {"Authorization": f"Bearer {token}"}
+    response = requests.get(url, headers=headers, verify=False)
+
+    if response.status_code != 200:
+        return []
+
+    repos = response.json()
+    return [repo['full_name'] for repo in repos]
+
 def fetch_prs(repo, token, since, until, state):
     url = f"{GITHUB_API}/repos/{repo}/pulls"
     headers = {"Authorization": f"Bearer {token}"}
