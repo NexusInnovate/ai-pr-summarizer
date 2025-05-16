@@ -1,0 +1,8 @@
+streamlit
+requests
+openai
+python-dotenv
+fastapi
+uvicorn
+httpx
+plotly
