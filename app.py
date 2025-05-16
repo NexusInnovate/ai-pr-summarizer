@@ -1,5 +1,5 @@
 import streamlit as st
-from github_utils import fetch_prs, get_diff
+from github_utils import fetch_prs, get_diff, fetch_org_repos
 from ai_summarizer import summarize_diff, review_pr
 from datetime import datetime
 import pandas as pd
@@ -9,7 +9,7 @@ load_dotenv()
 
 st.title("🤖 PR Review Assistant (AI Powered)")
 
-repo = st.text_input("GitHub Repository", "your-org/your-repo")
+org = st.text_input("GitHub Org", "NexusInnovate")
 # repo = "vamshikarru01/ai-pr-summarizer"
 # token = st.text_input("GitHub Token", type="password")
 token = os.getenv("GITHUB_TOKEN")
@@ -17,15 +17,25 @@ token = os.getenv("GITHUB_TOKEN")
 since = st.date_input("Start Date")
 until = st.date_input("End Date")
 
+#---------------------To Fetch List of Repos and PRs---------
+selected_repo_list = []
+if org and token:
+    repo_names_list = fetch_org_repos(org, token)
+    if repo_names_list:
+        selected_repo_list =  st.multiselect(f"select repos from {org} for PR summary and review details ", repo_names_list)
+    else:
+        st.warning(f"No repositories under {org}")
+
 tab1, tab2 = st.tabs(["Merged PRs Summary", "Open PRs Review"])
 
 # ------------------- TAB 1: Merged PRs -------------------
 with tab1:
     if st.button("Generate Summaries"):
-        if not repo or not token:
+        if not selected_repo_list or not token:
             st.error("Missing GitHub repo or token.")
         else:
-            st.info("Fetching PRs...")
+          for repo in selected_repo_list:  
+            st.info(f"Fetching PRs for {repo}...")
             prs = fetch_prs(repo, token, since.isoformat(), until.isoformat(), state="closed")
             st.success(f"✅ Found {len(prs)} merged PR(s).")
 
@@ -52,7 +62,7 @@ with tab1:
 
             # Display the table after all PRs are processed
             if pr_data:
-                st.markdown("## PR Summary Table")
+                st.markdown(f"## PR Summary Table for {repo}")
                 df = pd.DataFrame(pr_data)
                 # st.table(df)
                 # st.dataframe(df)  # or use st.table(df) for a static table
@@ -67,10 +77,11 @@ with tab1:
 # ------------------- TAB 2: Open PRs -------------------
 with tab2:
     if st.button("Check Open PRs Review"):
-        if not repo or not token:
+        if not selected_repo_list or not token:
             st.error("Missing GitHub repo or token.")
         else:
-            st.info("Fetching Open PRs...")
+          for repo in selected_repo_list:  
+            st.info(f"Fetching Open PRs for {repo}...")
             open_prs = fetch_prs(repo, token, since.isoformat(), until.isoformat(), state="open")
             st.success(f"🔍 Found {len(open_prs)} open PR(s).")
             pr_data = []
@@ -95,7 +106,7 @@ with tab2:
 
             # Display the table after all PRs are processed
             if st.session_state.open_prs:
-                st.markdown("## PR Summary Table")
+                st.markdown(f"## PR Summary Table for {repo}")
                 df = pd.DataFrame(st.session_state.open_prs)
                 for i, row in df.iterrows():
                     st.markdown("---")
