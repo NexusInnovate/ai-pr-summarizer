@@ -1,5 +1,6 @@
 import streamlit as st
 from github_utils import fetch_prs, get_diff, fetch_org_repos
+from db_utils import fetch_pr_details_by_id, insert_pr_details
 from ai_summarizer import summarize_diff, review_pr
 from metrics_utils import analyze_pr_metrics
 from datetime import datetime
@@ -41,11 +42,18 @@ with tab1:
             st.success(f"✅ Found {len(prs)} merged PR(s).")
 
             pr_data = []  # List to collect rows for the table
-
             for pr in prs:
                 with st.spinner("🔍 Summarizing..."):
+                  pr_id = repo + str(pr['number']) 
+                  print(f"prid: {pr_id}") 
+                  summary = fetch_pr_details_by_id("Merged_PR_Reviews.db", "GENERATE_SUMMARIES", pr_id) 
+                  if not summary:
                     diff = get_diff(repo, pr['number'], token)
                     summary = summarize_diff(diff)
+                    insert_pr_details("Merged_PR_Reviews.db", "GENERATE_SUMMARIES", pr_id, summary)
+                    print(f"inserted summary for PR id: {pr_id}")
+                  
+                  
 
                 # Collect table data
                 title = f"#{pr['number']} - {pr['title']}"
@@ -89,8 +97,15 @@ with tab2:
 
             for pr in open_prs:
                 with st.spinner(f"Analyzing PR #{pr['number']}..."):
-                    diff = get_diff(repo, pr['number'], token)
-                    quality_feedback = review_pr(diff)
+                    pr_id = repo + str(pr['number']) 
+                    print(f"prid: {pr_id}") 
+                    quality_feedback = fetch_pr_details_by_id("Open_PR_Reviews.db", "CHECK_OPEN_PR_REVIEW", pr_id) 
+                    if not quality_feedback:
+                        diff = get_diff(repo, pr['number'], token)
+                        quality_feedback = review_pr(diff)
+                        insert_pr_details("Open_PR_Reviews.db", "CHECK_OPEN_PR_REVIEW", pr_id, quality_feedback)
+                        print(f"inserted quality_feedback PR id: {pr_id}")
+                    
 
                 title = f"#{pr['number']} - {pr['title']}"
                 metadata = (
