@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import os
 from datetime import datetime, timezone, timedelta
+from admin_dashboard import render_admin_tab
 from dotenv import load_dotenv
 import plotly.express as px
 import plotly.graph_objects as go
@@ -224,11 +225,12 @@ if not org or not token or not selected_repo_list:
     st.stop()
 
 # Create tabs
-tab1, tab2, tab3, tab4 = st.tabs([
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "📚 Merged PRs Summary",
     "👁️ Open PRs Review", 
     "📊 PR Metrics & Analytics", 
-    "🛡️ Security Scans"
+    "🛡️ Security Scans",
+    "Admin Metrics"
 ])
 
 # ------------------- TAB 1: Merged PRs -------------------
@@ -934,6 +936,10 @@ with tab4:
                                     </div>
                                     <div style="margin-bottom: 15px;"></div>
                                     """, unsafe_allow_html=True)
+
+# ------------------- TAB 5: Admin Metrics (Static Mocked Data, 3-Column Layout) -------------------
+with tab5:
+    render_admin_tab()
 
 # Footer
 st.markdown("""
