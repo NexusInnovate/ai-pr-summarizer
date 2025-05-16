@@ -1,6 +1,7 @@
 import streamlit as st
 from github_utils import fetch_prs, get_diff, fetch_org_repos
 from ai_summarizer import summarize_diff, review_pr
+from metrics_utils import analyze_pr_metrics
 from datetime import datetime
 import pandas as pd
 import os
@@ -26,7 +27,7 @@ if org and token:
     else:
         st.warning(f"No repositories under {org}")
 
-tab1, tab2 = st.tabs(["Merged PRs Summary", "Open PRs Review"])
+tab1, tab2, tab3 = st.tabs(["Merged PRs Summary", "Open PRs Review", "PR Metrics"])
 
 # ------------------- TAB 1: Merged PRs -------------------
 with tab1:
@@ -114,3 +115,57 @@ with tab2:
                     cols[0].markdown(f"**{row['Title']}**")
                     cols[1].markdown(row['Metadata'], unsafe_allow_html=True)
                     cols[2].markdown(row['Summary'], unsafe_allow_html=True)
+
+# ------------------- TAB 3: PR Metrics  -------------------
+with tab3:
+    pr_state_option = st.selectbox(
+        "Select PR Type for Metrics",
+        options=["All", "Open", "Merged"],
+        index=0
+    )
+
+    # Map UI option to GitHub API state
+    pr_state = "all" if pr_state_option == "All" else "open" if pr_state_option == "Open" else "closed"
+
+    if st.button("Generate PR Metrics"):
+        if not selected_repo_list or not token:
+            st.error("Missing GitHub repo or token.")
+        else:
+            all_metrics = []
+            st.info(f"Fetching {pr_state_option.lower()} PRs for metrics analysis...")
+
+            for repo in selected_repo_list:
+                try:
+                    st.write(f"📊 Analyzing {repo}...")
+                    prs = fetch_prs(repo, token, since.isoformat(), until.isoformat(), state=pr_state)
+                    if prs:
+                        df = analyze_pr_metrics(repo, prs)
+                        df["Repository"] = repo
+                        df["PR Link"] = df["PR Number"].apply(
+                            lambda pr: f"<a href='https://github.com/{repo}/pull/{pr}' target='_blank'>#{pr}</a>"
+                        )
+                        all_metrics.append(df)
+                    else:
+                        st.warning(f"No {pr_state_option.lower()} PRs found for {repo} in this date range.")
+                except Exception as e:
+                    st.error(f"Error analyzing {repo}: {e}")
+
+            if all_metrics:
+                full_df = pd.concat(all_metrics, ignore_index=True)
+
+                # Reorder columns to show PR Link first
+                columns = ["PR Link", "Repository", "Author", "Lines Changed", "Comments",
+                           "Reviewers", "First Review (hrs)", "Merged Without Comments"]
+                full_df = full_df[columns]
+
+                # Render HTML table with working hyperlinks
+                st.markdown("## 🔢 PR Metrics Summary")
+                st.write(full_df.to_html(escape=False, index=False), unsafe_allow_html=True)
+
+                # Prepare CSV without HTML
+                csv_df = full_df.copy()
+                csv_df["PR Link"] = csv_df["PR Link"].str.extract(r"href='(.*?)'")
+                st.download_button("Download All Metrics CSV", csv_df.to_csv(index=False), "all_pr_metrics.csv", "text/csv")
+            else:
+                st.warning("No PR metrics to display.")
+
