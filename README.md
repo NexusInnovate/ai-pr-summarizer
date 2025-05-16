@@ -5,4 +5,4 @@ It is a tool that automatically summarizes what changed, why, and how, to help w
 
 <!-- Run the Dashboard Locally -->
 pip install -r requirements.txt
-streamlit run app.py
+python3 run_app.py

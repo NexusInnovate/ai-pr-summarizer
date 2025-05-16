@@ -53,3 +53,26 @@ def fetch_org_repos(org, token):
     data = response.json()
     repos = find_all_repo_names(data)
     return repos
+
+def fetch_codeql_alerts(repo, token, state="open"):
+    """
+    Fetches CodeQL alerts for a given GitHub repository.
+    """
+    url = f"{GITHUB_API}/repos/{repo}/code-scanning/alerts"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json"
+    }
+    params = {
+        "state": state,
+        "per_page": 100
+    }
+
+    response = requests.get(url, headers=headers, params=params, verify=False)
+    
+    if response.status_code == 200:
+        print("codeql: ", response.json())
+        return response.json()
+    else:
+        print(f"⚠️ Failed to fetch CodeQL alerts: {response.status_code} - {response.text}")
+        return []
