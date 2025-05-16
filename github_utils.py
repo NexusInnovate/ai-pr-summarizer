@@ -5,6 +5,19 @@ from dotenv import load_dotenv
 load_dotenv()
 GITHUB_API = os.getenv("GITHUB_API")
 
+"""
+  Fetches pull requests from a GitHub repository within a date range.
+
+  Parameters:
+      repo (str): GitHub repository in the format 'org/repo'.
+      token (str): Personal access token for GitHub API authentication.
+      since (str): ISO 8601 formatted datetime string (start of range).
+      until (str): ISO 8601 formatted datetime string (end of range).
+      state (str): PR state - either 'open' or 'closed'.
+
+  Returns:
+      list: A list of PR dictionaries, filtered by merge date if state is 'closed'.
+  """
 def fetch_prs(repo, token, since, until, state):
     url = f"{GITHUB_API}/repos/{repo}/pulls"
     headers = {"Authorization": f"Bearer {token}"}
