@@ -3,6 +3,7 @@ from github_utils import fetch_prs, get_diff, fetch_org_repos
 from ai_summarizer import summarize_diff, review_pr
 from metrics_utils import analyze_pr_metrics
 from datetime import datetime
+from admin_dashboard import render_admin_tab
 import pandas as pd
 import os
 from dotenv import load_dotenv
@@ -27,7 +28,7 @@ if org and token:
     else:
         st.warning(f"No repositories under {org}")
 
-tab1, tab2, tab3 = st.tabs(["Merged PRs Summary", "Open PRs Review", "PR Metrics"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["Merged PRs Summary", "Open PRs Review", "PR Metrics", "Tab 4 (Optional)", "Admin Metrics"])
 
 # ------------------- TAB 1: Merged PRs -------------------
 with tab1:
@@ -168,4 +169,11 @@ with tab3:
                 st.download_button("Download All Metrics CSV", csv_df.to_csv(index=False), "all_pr_metrics.csv", "text/csv")
             else:
                 st.warning("No PR metrics to display.")
+with tab4:
+    st.header("")
 
+# ------------------- TAB 5: Admin Metrics (Static Mocked Data) -------------------
+
+# ------------------- TAB 5: Admin Metrics (Static Mocked Data, 3-Column Layout) -------------------
+with tab5:
+    render_admin_tab()
