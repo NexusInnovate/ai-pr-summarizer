@@ -3,29 +3,10 @@ import requests
 from datetime import datetime
 import pandas as pd
 from dotenv import load_dotenv
-from openai import OpenAI
-import httpx
-
 load_dotenv()
 
 GITHUB_API = os.getenv("GITHUB_API")
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-
-client = OpenAI(api_key=OPENAI_API_KEY, http_client=httpx.Client(verify=False))
-
-
-def fetch_prs(repo, token, since, until, state="closed"):
-    headers = {"Authorization": f"Bearer {token}"}
-    url = f"https://api.github.com/repos/{repo}/pulls?state={state}&per_page=100&sort=created&direction=desc"
-    response = requests.get(url, headers=headers)
-    all_prs = response.json()
-
-    filtered = [
-        pr for pr in all_prs
-        if since <= pr['created_at'][:10] <= until
-    ]
-    return filtered
 
 def get_pr_comments(repo, pr_number):
     url = f"{GITHUB_API}/repos/{repo}/issues/{pr_number}/comments"
@@ -85,3 +66,20 @@ def analyze_pr_metrics(repo, prs):
         })
 
     return pd.DataFrame(metrics)
+
+
+def add_pr_analytics(repo, all_prs):
+    # Fetch additions/deletions via per-PR API
+    print("repo variables....", repo)
+    # print("all_prs", all_prs)
+    for pr in all_prs:
+        pr_number = pr["number"]
+        print("1-additions...", pr_number)
+        pr_details = get_pr_diff_stats(repo, pr_number)
+        pr["additions"] = pr_details.get('additions', 0)
+        print("1-additions...", pr["additions"])
+        pr["deletions"] = pr_details.get('deletions', 0)
+        pr["comments"] = pr_details.get("comments", 0)
+        pr["review_comments"] = pr_details.get("review_comments", 0)
+
+    return all_prs
