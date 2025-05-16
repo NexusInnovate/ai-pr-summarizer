@@ -202,16 +202,10 @@ with st.sidebar:
         """)
 
 # Main content
-st.markdown("<h1 class='main-header'>PR Review AI Assistant (AI Powered)</h1>", unsafe_allow_html=True)
+st.markdown("<h1 class='main-header'>GitPulse AI Assistant</h1>", unsafe_allow_html=True)
 
 if not org or not token or not selected_repo_list:
     st.info("👈 Please configure the required settings in the sidebar")
-    # Show a sample dashboard when no data is loaded
-    # st.markdown("### 🔍 Preview of PR Review Assistant")
-    
-    # # Display placeholder image
-    # st.image("https://via.placeholder.com/800x400?text=PR+Review+Assistant+Preview", 
-    #          caption="Sample dashboard visualization", use_column_width=True)
     
     st.markdown("""
     This tool provides:
