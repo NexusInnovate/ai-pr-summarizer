@@ -49,10 +49,9 @@ with tab1:
                   summary = fetch_pr_details_by_id("Merged_PR_Reviews.db", "GENERATE_SUMMARIES", pr_id) 
                   if not summary:
                     diff = get_diff(repo, pr['number'], token)
-                    summary = summarize_diff(diff)
-                    insert_pr_details("Merged_PR_Reviews.db", "GENERATE_SUMMARIES", pr_id, summary)
+                    insert_pr_details("Merged_PR_Reviews.db", "GENERATE_SUMMARIES", pr_id, diff)
                     print(f"inserted summary for PR id: {pr_id}")
-                  
+                  summary = summarize_diff(diff)
                   
 
                 # Collect table data
@@ -99,12 +98,12 @@ with tab2:
                 with st.spinner(f"Analyzing PR #{pr['number']}..."):
                     pr_id = repo + str(pr['number']) 
                     print(f"prid: {pr_id}") 
-                    quality_feedback = fetch_pr_details_by_id("Open_PR_Reviews.db", "CHECK_OPEN_PR_REVIEW", pr_id) 
-                    if not quality_feedback:
+                    diff = fetch_pr_details_by_id("Open_PR_Reviews.db", "CHECK_OPEN_PR_REVIEW", pr_id) 
+                    if not diff:
                         diff = get_diff(repo, pr['number'], token)
-                        quality_feedback = review_pr(diff)
-                        insert_pr_details("Open_PR_Reviews.db", "CHECK_OPEN_PR_REVIEW", pr_id, quality_feedback)
+                        insert_pr_details("Open_PR_Reviews.db", "CHECK_OPEN_PR_REVIEW", pr_id, diff)
                         print(f"inserted quality_feedback PR id: {pr_id}")
+                    quality_feedback = review_pr(diff)
                     
 
                 title = f"#{pr['number']} - {pr['title']}"
