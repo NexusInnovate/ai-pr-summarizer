@@ -9,6 +9,7 @@ import plotly.graph_objects as go
 from github_utils import fetch_prs, get_diff, fetch_org_repos, fetch_codeql_alerts
 from ai_summarizer import summarize_diff, review_pr, summarize_all_prs
 from metrics_utils import analyze_pr_metrics, add_pr_analytics
+import textwrap
 
 # Load environment variables and configure page
 load_dotenv()
@@ -237,7 +238,7 @@ with tab1:
     This helps you keep track of what changes were made across your repositories.
     """)
     
-    if st.button("Generate Merged PR Summaries", type="primary", use_container_width=True):
+    if st.button("Generate PR Summary", type="primary", use_container_width=True):
         all_merged_prs = []
         all_repos_summary = []
         
@@ -327,7 +328,7 @@ with tab1:
         # Display PRs as cards
         for pr in display_prs:
             summary_preview = ' '.join(pr['Summary'].split()[:10]) + "..."
-            with st.expander(f"**#{pr['PR Number']} - {pr['Title']} | {pr['Repository']}]**"):
+            with st.expander(f"**#{pr['PR Number']} - {pr['Title']} | {pr['Repository']}**"):
                 with st.container():
                     # PR Header with metadata
                     st.markdown(f"**[#{pr['PR Number']} - {pr['Title']}]({pr['URL']})**")
@@ -371,7 +372,7 @@ with tab2:
                 if open_prs:
                     st.success(f"Found {len(open_prs)} open PR(s) in {repo}")
                     
-                    progress_bar = st.progress(0)
+                    # progress_bar = st.progress(0)
                     pr_data = []
                     
                     for i, pr in enumerate(open_prs):
@@ -380,22 +381,29 @@ with tab2:
                             review_feedback = review_pr(diff)
                             
                             created_date = datetime.strptime(pr['created_at'], "%Y-%m-%dT%H:%M:%SZ")
+                            title = f"#{pr['number']} - {pr['title']}"
+                            metadata = (
+                                f"<strong>Repository:</strong> {repo}<br>"
+                                f"<strong>Author:</strong> {pr['user']['login']}<br>"
+                                f"<a href='{pr['html_url']}' target='_blank'>View PR</a>"
+                            )
                             
                             pr_info = {
                                 "Repository": repo,
                                 "PR Number": pr['number'],
-                                "Title": pr['title'],
+                                "Title": title,
+                                "Metadata": metadata,
                                 "Author": pr['user']['login'],
                                 "Created At": created_date,
                                 "URL": pr['html_url'],
-                                "Review": review_feedback,
-                                "Additions": pr.get('additions', 0),
-                                "Deletions": pr.get('deletions', 0)
+                                "Review": review_feedback
+                                # "Additions": pr.get('additions', 0),
+                                # "Deletions": pr.get('deletions', 0)
                             }
                             pr_data.append(pr_info)
                         
                         # Update progress bar
-                        progress_bar.progress((i + 1) / len(open_prs))
+                        # progress_bar.progress((i + 1) / len(open_prs))
                     
                     all_open_prs.extend(pr_data)
                 else:
@@ -406,31 +414,34 @@ with tab2:
     # Display open PRs if available
     if st.session_state.open_prs:
         # st.markdown(f"## Found {len(st.session_state.open_prs)} Open PRs")
-        st.markdown(f"""
-            <div style="
-                display:inline-block;
-                background:#e1ecf4;
-                color:#0366d6;
-                font-weight:600;
-                padding:4px 12px;
-                border-radius:20px;
-                font-size:16px;
-            ">
-            🟢&nbsp;Found {len(st.session_state.open_prs)} Open PR(s)
-            </div>
-            """, unsafe_allow_html=True)
         
-        # Sort by created date, newest first
+        # # Sort by created date, newest first
+        display_prs = st.session_state.open_prs
         sorted_prs = sorted(st.session_state.open_prs, key=lambda x: x['Created At'], reverse=True)
         
         # Group by repository
         repos = list(set(pr['Repository'] for pr in sorted_prs))
-        
-        # Repository filter
-        if len(repos) > 1:
-            selected_repo = st.selectbox("Filter by Repository", ["All"] + repos, key="open_pr_repo_filter")
-        else:
-            selected_repo = "All"
+
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            st.markdown(f"""
+                <div style="
+                    display:inline-block;
+                    background:#e1ecf4;
+                    color:#0366d6;
+                    font-weight:600;
+                    padding:4px 12px;
+                    border-radius:20px;
+                    font-size:16px;
+                ">
+                🟢&nbsp;Found {len(st.session_state.open_prs)} Open PR(s)
+                </div>
+                """, unsafe_allow_html=True)
+        with col2:
+            if len(repos) > 1:
+                selected_repo = st.selectbox("Filter by Repository", ["All"] + repos, key="open_pr_repo_filter")
+            else:
+                selected_repo = "All"
         
         # Filter PRs by repository if needed
         if selected_repo != "All":
@@ -439,32 +450,105 @@ with tab2:
             display_prs = sorted_prs
         
         # Display PRs as cards
-        for pr in display_prs:
-            with st.container():
-                # Calculate PR age in days
-                pr_age = (datetime.now() - pr['Created At']).days
-                age_color = "#28a745" if pr_age < 3 else "#dbab09" if pr_age < 7 else "#d73a49"
+        # for pr in display_prs:
+        #     with st.container():
+        #         # Calculate PR age in days
+        #         pr_age = (datetime.now() - pr['Created At']).days
+        #         age_color = "#28a745" if pr_age < 3 else "#dbab09" if pr_age < 7 else "#d73a49"
                 
-                st.markdown(f"""
-                <div class="pr-summary">
-                     <h3 style="margin:0;">
-                        <a href="{pr['URL']}" target="_blank" style="text-decoration:none; color:#1a237e;">
-                        #{pr['PR Number']} - {pr['Title']}
-                        </a>
-                    </h3>
-                    <p>
-                        <span class="small-text">
-                            <strong>Repository:</strong> {pr['Repository']} | 
-                            <strong>Author:</strong> {pr['Author']} | 
-                            <strong>Created:</strong> {pr['Created At'].strftime('%Y-%m-%d %H:%M')} |
-                            <strong>Age:</strong> <span style="color: {age_color};">{pr_age} days</span>
-                        </span>
-                    </p>
-                    <div class="card">
-                        {pr['Review']}
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
+        #         st.markdown(f"""
+        #         <div class="pr-summary">
+        #              <h3 style="margin:0;">
+        #                 <a href="{pr['URL']}" target="_blank" style="text-decoration:none; color:#1a237e;">
+        #                 #{pr['PR Number']} - {pr['Title']}
+        #                 </a>
+        #             </h3>
+        #             <p>
+        #                 <span class="small-text">
+        #                     <strong>Repository:</strong> {pr['Repository']} | 
+        #                     <strong>Author:</strong> {pr['Author']} | 
+        #                     <strong>Created:</strong> {pr['Created At'].strftime('%Y-%m-%d %H:%M')} |
+        #                     <strong>Age:</strong> <span style="color: {age_color};">{pr_age} days</span>
+        #                 </span>
+        #             </p>
+        #             <div class="card">
+        #                 {pr['Review']}
+        #             </div>
+        #         </div>
+        #         """, unsafe_allow_html=True)
+
+        # Display the table after all PRs are processed
+        if display_prs:
+            # st.markdown(f"## PR Summary Table for {selected_repo}")
+            df = pd.DataFrame(display_prs)
+            def short(text, n_lines=3):
+                """Return only the first n_lines of a long markdown string."""
+                if not text:
+                    return ""
+                lines = textwrap.dedent(str(text)).splitlines()
+                if len(lines) <= n_lines:
+                    return text
+                return "\n".join(lines[:n_lines]) + " …"
+            
+            # Display each PR as a card
+            for idx, row in df.iterrows():
+                # Create a unique key for this PR
+                pr_key = f"pr_{selected_repo}_{idx}"
+                toggle_key = f"show_full_{selected_repo}_{idx}"
+                
+                # Initialize state if not exists
+                if toggle_key not in st.session_state:
+                    st.session_state[toggle_key] = False
+
+                st.markdown("""
+                    <style>
+                    div.stButton > button {
+                        background: linear-gradient(to right, #4776E6, #8E54E9);
+                        color: white;
+                        border: none;
+                        border-radius: 8px;
+                        padding: 8px 16px;
+                        font-weight: 500;
+                        text-align: center;
+                        margin: 4px 0px;
+                        transition: all 0.3s ease;
+                        box-shadow: 0px 4px 10px rgba(142, 84, 233, 0.3);
+                        float: right;
+                        cursor: pointer;
+                    }
+                    div.stButton > button:hover {
+                        text-decoration: underline;
+                    }
+                    </style>
+                    """, unsafe_allow_html=True)
+                
+                with st.container():
+                    cols = st.columns([1.5, 2, 3])
+                    
+                    # Column 1: PR Info
+                    with cols[0]:
+                        st.markdown(f"**PR{row['Title']}**")
+                    
+                    # Column 2: Metadata
+                    with cols[1]:
+                        st.markdown(row.get("Metadata", ""), unsafe_allow_html=True)
+                    
+                    # Column 3: Review with toggle functionality
+                    with cols[2]:
+                        if st.session_state[toggle_key]:
+                            # Show full review
+                            st.markdown(row.get("Review", ""), unsafe_allow_html=True)
+                            if st.button("Show less ▲", key=f"less_{pr_key}"):
+                                st.session_state[toggle_key] = False
+                                st.rerun()
+                        else:
+                            # Show preview
+                            st.markdown(short(row.get("Review", "")), unsafe_allow_html=True)
+                            if st.button("Show more ▼", key=f"more_{pr_key}"):
+                                st.session_state[toggle_key] = True
+                                st.rerun()
+                        
+                st.markdown("---")
 
 # ------------------- TAB 3: PR Metrics -------------------
 with tab3:
