@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 import plotly.express as px
 import plotly.graph_objects as go
 from github_utils import fetch_prs, get_diff, fetch_org_repos, fetch_codeql_alerts
-from ai_summarizer import summarize_diff, review_pr
+from ai_summarizer import summarize_diff, review_pr, summarize_all_prs
 from metrics_utils import analyze_pr_metrics, add_pr_analytics
 
 # Load environment variables and configure page
@@ -131,6 +131,8 @@ if 'open_prs' not in st.session_state:
     st.session_state.open_prs = []
 if 'merged_prs' not in st.session_state:
     st.session_state.merged_prs = []
+if 'repo_summaries' not in st.session_state:
+    st.session_state.repo_summaries = []
 if 'metrics_df' not in st.session_state:
     st.session_state.metrics_df = None
 if 'alerts' not in st.session_state:
@@ -224,7 +226,7 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "👁️ Open PRs Review", 
     "📊 PR Metrics & Analytics", 
     "🛡️ Security Scans",
-    "Admin Metrics"
+    "⚙️ Admin Metrics"
 ])
 
 # ------------------- TAB 1: Merged PRs -------------------
@@ -237,6 +239,7 @@ with tab1:
     
     if st.button("Generate Merged PR Summaries", type="primary", use_container_width=True):
         all_merged_prs = []
+        all_repos_summary = []
         
         for repo in selected_repo_list:
             with st.spinner(f"Fetching merged PRs for {repo}..."):
@@ -247,12 +250,12 @@ with tab1:
                     
                     progress_bar = st.progress(0)
                     pr_data = []
-                    
+                    repo_summaries = ""
                     for i, pr in enumerate(prs):
                         with st.spinner(f"Summarizing PR #{pr['number']}..."):
                             diff = get_diff(repo, pr['number'], token)
                             summary = summarize_diff(diff)
-                            
+                            repo_summaries = repo_summaries+'\n'+summary
                             merged_date = datetime.strptime(pr['merged_at'], "%Y-%m-%dT%H:%M:%SZ") if pr.get('merged_at') else None
                             
                             # Only include if the PR was actually merged
@@ -272,16 +275,36 @@ with tab1:
                         
                         # Update progress bar
                         progress_bar.progress((i + 1) / len(prs))
-                    
+
+                    repo_summary = summarize_all_prs(repo_summaries)
+                    if repo_summary:
+                        repo_summary = {
+                            "Repository": repo,
+                            "summary":repo_summary
+                        }
+                    all_repos_summary.append(repo_summary)
                     all_merged_prs.extend(pr_data)
                 else:
                     st.info(f"No merged PRs found for {repo} in the selected date range")
         
         st.session_state.merged_prs = all_merged_prs
+        st.session_state.repo_summaries = all_repos_summary
     
+    # Display Overall release notes
+    if st.session_state.repo_summaries:
+        st.markdown("## Overall Summary")
+        df = pd.DataFrame(st.session_state.repo_summaries)
+        # Render as Markdown table with wrapped columns
+        for i, row in df.iterrows():
+            st.markdown("---")
+            cols = st.columns([1, 3])  # Adjust column widths
+            cols[0].markdown(f"**{row['Repository']}**")
+            cols[1].markdown(row['summary'], unsafe_allow_html=True)
+
+    st.markdown('<hr style="border:1px solid #eee"/>', unsafe_allow_html=True)
     # Display merged PRs if available
     if st.session_state.merged_prs:
-        st.markdown(f"## Found {len(st.session_state.merged_prs)} Merged PRs")
+        st.markdown(f"## Merged PRs List")
         
         # Sort by merged date, newest first
         sorted_prs = sorted(st.session_state.merged_prs, key=lambda x: x['Merged At'], reverse=True)
@@ -303,25 +326,32 @@ with tab1:
         
         # Display PRs as cards
         for pr in display_prs:
-            with st.container():
-                st.markdown(f"""
-                <div class="pr-summary">
-                    <h3>{pr['Title']}</h3>
-                    <p>
-                        <span class="small-text">
-                            <strong>PR:</strong> <a href="{pr['URL']}" target="_blank">#{pr['PR Number']}</a> | 
-                            <strong>Repository:</strong> {pr['Repository']} | 
-                            <strong>Author:</strong> {pr['Author']} | 
-                            <strong>Merged:</strong> {pr['Merged At'].strftime('%Y-%m-%d %H:%M')} |
-                            <strong>Changes:</strong> +{pr['Additions']} -{pr['Deletions']} lines
-                        </span>
-                    </p>
-                    <div class="card">
-                        <h4>📝 AI Summary:</h4>
-                        {pr['Summary']}
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
+            summary_preview = ' '.join(pr['Summary'].split()[:10]) + "..."
+            with st.expander(f"**#{pr['PR Number']} - {pr['Title']} | {pr['Repository']}]**"):
+                with st.container():
+                    # PR Header with metadata
+                    st.markdown(f"**[#{pr['PR Number']} - {pr['Title']}]({pr['URL']})**")
+                    st.markdown(f"Repository: **{pr['Repository']}** | Author: **{pr['Author']}** | Merged: **{pr['Merged At'].strftime('%Y-%m-%d %H:%M')}**")
+                    st.markdown(f"{pr['Summary']}")
+                    # Link to GitHub
+                    st.markdown(f"[View on GitHub]({pr['URL']})", unsafe_allow_html=True)
+            # st.markdown(f"""
+            # <div class="pr-summary">
+            #     <h3>#{pr['PR Number']}{pr['Title']}</h3>
+            #     <p>
+            #         <span class="small-text">
+            #             <strong>PR:</strong> <a href="{pr['URL']}" target="_blank">#{pr['PR Number']}</a> | 
+            #             <strong>Repository:</strong> {pr['Repository']} | 
+            #             <strong>Author:</strong> {pr['Author']} | 
+            #             <strong>Merged:</strong> {pr['Merged At'].strftime('%Y-%m-%d %H:%M')} |
+            #             <strong>Changes:</strong> +{pr['Additions']} -{pr['Deletions']} lines
+            #         </span>
+            #     </p>
+            #     <div class="card">
+            #         {pr['Summary']}
+            #     </div>
+            # </div>
+            # """, unsafe_allow_html=True)
 
 # ------------------- TAB 2: Open PRs -------------------
 with tab2:
@@ -375,7 +405,20 @@ with tab2:
     
     # Display open PRs if available
     if st.session_state.open_prs:
-        st.markdown(f"## Found {len(st.session_state.open_prs)} Open PRs")
+        # st.markdown(f"## Found {len(st.session_state.open_prs)} Open PRs")
+        st.markdown(f"""
+            <div style="
+                display:inline-block;
+                background:#e1ecf4;
+                color:#0366d6;
+                font-weight:600;
+                padding:4px 12px;
+                border-radius:20px;
+                font-size:16px;
+            ">
+            🟢&nbsp;Found {len(st.session_state.open_prs)} Open PR(s)
+            </div>
+            """, unsafe_allow_html=True)
         
         # Sort by created date, newest first
         sorted_prs = sorted(st.session_state.open_prs, key=lambda x: x['Created At'], reverse=True)
@@ -404,19 +447,20 @@ with tab2:
                 
                 st.markdown(f"""
                 <div class="pr-summary">
-                    <h3>{pr['Title']}</h3>
+                     <h3 style="margin:0;">
+                        <a href="{pr['URL']}" target="_blank" style="text-decoration:none; color:#1a237e;">
+                        #{pr['PR Number']} - {pr['Title']}
+                        </a>
+                    </h3>
                     <p>
                         <span class="small-text">
-                            <strong>PR:</strong> <a href="{pr['URL']}" target="_blank">#{pr['PR Number']}</a> | 
                             <strong>Repository:</strong> {pr['Repository']} | 
                             <strong>Author:</strong> {pr['Author']} | 
                             <strong>Created:</strong> {pr['Created At'].strftime('%Y-%m-%d %H:%M')} |
-                            <strong>Age:</strong> <span style="color: {age_color};">{pr_age} days</span> |
-                            <strong>Changes:</strong> +{pr['Additions']} -{pr['Deletions']} lines
+                            <strong>Age:</strong> <span style="color: {age_color};">{pr_age} days</span>
                         </span>
                     </p>
                     <div class="card">
-                        <h4>🔍 AI Review:</h4>
                         {pr['Review']}
                     </div>
                 </div>
@@ -496,7 +540,6 @@ with tab3:
         avg_size = sum(
             pr.get("additions", 0) + pr.get("deletions", 0) for pr in all_prs
         ) / len(all_prs) if all_prs else 0
-        print("avg_size---------", avg_size)
         
         # Calculate average comments per PR
         comments_per_pr = [
