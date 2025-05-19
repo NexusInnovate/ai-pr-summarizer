@@ -124,6 +124,23 @@ st.markdown("""
         visibility: visible;
         opacity: 1;
     }
+    div.stButton > button {
+        background: linear-gradient(to right, #4776E6, #8E54E9);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 8px 16px;
+        font-weight: 500;
+        text-align: center;
+        margin: 4px 0px;
+        transition: all 0.3s ease;
+        box-shadow: 0px 4px 10px rgba(142, 84, 233, 0.3);
+        float: right;
+        cursor: pointer;
+    }
+    div.stButton > button:hover {
+        text-decoration: underline;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -499,28 +516,6 @@ with tab2:
                 # Initialize state if not exists
                 if toggle_key not in st.session_state:
                     st.session_state[toggle_key] = False
-
-                st.markdown("""
-                    <style>
-                    div.stButton > button {
-                        background: linear-gradient(to right, #4776E6, #8E54E9);
-                        color: white;
-                        border: none;
-                        border-radius: 8px;
-                        padding: 8px 16px;
-                        font-weight: 500;
-                        text-align: center;
-                        margin: 4px 0px;
-                        transition: all 0.3s ease;
-                        box-shadow: 0px 4px 10px rgba(142, 84, 233, 0.3);
-                        float: right;
-                        cursor: pointer;
-                    }
-                    div.stButton > button:hover {
-                        text-decoration: underline;
-                    }
-                    </style>
-                    """, unsafe_allow_html=True)
                 
                 with st.container():
                     cols = st.columns([1.5, 2, 3])
