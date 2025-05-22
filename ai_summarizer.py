@@ -31,7 +31,7 @@ def review_pr(diff_text):
         - Identify code quality issues (style, structure, edge cases, security, etc.)
         - Give specific improvement suggestions
         - Include example fixes if possible
-        - Be concise and write in 2 sentences
+        - Be concise and write in 3 sentences
 
         PR diff:\n{diff_text}
         """
